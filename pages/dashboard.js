@@ -1,27 +1,29 @@
-import { useSession } from "next-auth/react";
+import { useSession, signIn, signOut } from "next-auth/react";
 import { useState, useEffect } from "react";
 
 export default function Dashboard() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState({
     title: "",
     description: "",
     status: "pending",
-    priority: "Medium",  // Default priority
+    priority: "Medium",
     dueDate: "",
   });
   const [errors, setErrors] = useState({});
-  const [sortType, setSortType] = useState("dueDate"); // Default sort by due date
+  const [sortType, setSortType] = useState("dueDate");
 
   useEffect(() => {
-    // Fetch tasks when the component mounts
-    fetch(`/api/tasks/${session?.userId}`)
-      .then((res) => res.json())
-      .then((data) => setTasks(data));
-  }, [session]);
+    if (status === 'authenticated' && session?.userId) {
+      // Fetch tasks only if session is authenticated and userId is present
+      fetch(`/api/tasks/${session.userId}`)
+        .then((res) => res.json())
+        .then((data) => setTasks(data))
+        .catch(err => console.error("Error fetching tasks:", err));
+    }
+  }, [status, session?.userId]);
 
-  // Form validation
   const validateForm = () => {
     const errors = {};
     if (!newTask.title.trim()) errors.title = "Title is required.";
@@ -29,7 +31,6 @@ export default function Dashboard() {
     return errors;
   };
 
-  // Handle task creation
   const handleCreateTask = async () => {
     const validationErrors = validateForm();
     if (Object.keys(validationErrors).length > 0) {
@@ -37,37 +38,40 @@ export default function Dashboard() {
       return;
     }
 
-    const res = await fetch(`/api/tasks/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...newTask, userId: session?.userId }),
-    });
-    const task = await res.json();
-    setTasks([...tasks, task]);
-
-    // Reset the form
-    setNewTask({
-      title: "",
-      description: "",
-      status: "pending",
-      priority: "Medium",
-      dueDate: "",
-    });
-    setErrors({});
+    try {
+      const res = await fetch(`/api/tasks/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...newTask, userId: session?.userId }),
+      });
+      if (res.ok) {
+        const task = await res.json();
+        setTasks([...tasks, task]);
+        setNewTask({
+          title: "",
+          description: "",
+          status: "pending",
+          priority: "Medium",
+          dueDate: "",
+        });
+        setErrors({});
+      } else {
+        console.error("Error creating task:", await res.text());
+      }
+    } catch (err) {
+      console.error("Error creating task:", err);
+    }
   };
 
-  // Get notifications for overdue and upcoming tasks
   const getNotifications = () => {
     const now = new Date();
     const upcomingTasks = tasks.filter(task => task.dueDate && new Date(task.dueDate) > now);
     const overdueTasks = tasks.filter(task => task.dueDate && new Date(task.dueDate) < now);
-
     return { upcomingTasks, overdueTasks };
   };
 
   const { upcomingTasks, overdueTasks } = getNotifications();
 
-  // Sorting tasks by priority or due date
   const sortedTasks = [...tasks].sort((a, b) => {
     if (sortType === "priority") {
       const priorities = { "High": 1, "Medium": 2, "Low": 3 };
@@ -79,15 +83,17 @@ export default function Dashboard() {
     return 0;
   });
 
-  // Handle task deletion
   const handleDeleteTask = async (taskId) => {
-    await fetch(`/api/tasks/${taskId}`, {
-      method: "DELETE",
-    });
-    setTasks(tasks.filter(task => task.id !== taskId));
+    try {
+      await fetch(`/api/tasks/${taskId}`, {
+        method: "DELETE",
+      });
+      setTasks(tasks.filter(task => task.id !== taskId));
+    } catch (err) {
+      console.error("Error deleting task:", err);
+    }
   };
 
-  // Handle task editing (basic inline editing for simplicity)
   const handleEditTask = async (taskId) => {
     const taskToEdit = tasks.find(task => task.id === taskId);
     const updatedTitle = prompt("Edit task title:", taskToEdit.title);
@@ -98,15 +104,35 @@ export default function Dashboard() {
       description: updatedDescription || taskToEdit.description,
     };
 
-    const res = await fetch(`/api/tasks/${taskId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updatedTask),
-    });
-
-    const updatedTaskFromServer = await res.json();
-    setTasks(tasks.map(task => (task.id === taskId ? updatedTaskFromServer : task)));
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedTask),
+      });
+      if (res.ok) {
+        const updatedTaskFromServer = await res.json();
+        setTasks(tasks.map(task => (task.id === taskId ? updatedTaskFromServer : task)));
+      } else {
+        console.error("Error updating task:", await res.text());
+      }
+    } catch (err) {
+      console.error("Error updating task:", err);
+    }
   };
+
+  if (status === 'loading') {
+    return <div>Loading...</div>;
+  }
+
+  if (status === 'unauthenticated') {
+    return (
+      <div>
+        <h1>You are not signed in</h1>
+        <button onClick={() => signIn()} className="bg-blue-500 text-white rounded-lg px-4 py-2">Sign in</button>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-4">
