@@ -1,0 +1,14 @@
+version: '3'
+services:
+  postgres:
+    image: postgres
+    container_name: ar-postgres
+    restart: unless-stopped
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DATABASE}
+    volumes:
+      - ./temp/postgres:/var/lib/postgresql/data
