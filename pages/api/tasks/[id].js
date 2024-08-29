@@ -21,7 +21,7 @@ export default async function handler(req, res) {
         });
 
         // Log the fetched tasks
-        console.log('Fetched tasks:', tasks);
+        //console.log('Fetched tasks:', tasks);
 
         if (tasks.length === 0) {
           return res.status(404).json({ error: 'No tasks found' });

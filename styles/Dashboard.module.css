@@ -1,0 +1,83 @@
+/* Dashboard.module.css */
+.container {
+    @apply flex justify-center items-center min-h-screen bg-gray-100;
+}
+
+input.input,
+textarea.textarea {
+    @apply w-full p-3 border border-gray-300 rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800;
+    /* Add text-gray-800 */
+}
+
+.card {
+    @apply p-8 max-w-4xl bg-white rounded-lg shadow-md;
+}
+
+.section {
+    @apply p-6 mb-8;
+}
+
+.heading {
+    @apply text-2xl font-semibold text-blue-800 mb-4;
+}
+
+.input,
+.textarea {
+    @apply w-full p-3 border border-gray-300 rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500;
+}
+
+.button {
+    @apply w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring;
+}
+
+.taskItem {
+    @apply bg-white border border-gray-200 rounded-lg shadow-md p-4 mb-4 flex items-start justify-between;
+}
+
+.taskContent {
+    @apply flex-1 pr-4;
+}
+
+.taskTitle {
+    @apply text-xl font-semibold mb-2;
+}
+
+.taskDescription {
+    @apply text-gray-700 mb-2;
+}
+
+.taskStatus {
+    @apply text-sm font-medium;
+}
+
+.pending {
+    @apply text-red-500;
+}
+
+.inprogress {
+    @apply text-yellow-500;
+}
+
+.finished {
+    @apply text-green-500;
+}
+
+.buttonGroup {
+    @apply flex flex-col space-y-2;
+}
+
+.statusButton {
+    @apply px-4 py-2 rounded-lg text-white font-bold focus:outline-none focus:ring;
+}
+
+.active {
+    @apply bg-blue-500 hover:bg-blue-700;
+}
+
+.disabled {
+    @apply bg-gray-300 cursor-not-allowed;
+}
+
+.deleteButton {
+    @apply bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring;
+}
