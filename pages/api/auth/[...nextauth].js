@@ -1,45 +1,36 @@
-// pages/api/auth/[...nextauth].js
-import NextAuth from 'next-auth';
-import CredentialsProvider from 'next-auth/providers/credentials';
-import { PrismaAdapter } from '@next-auth/prisma-adapter';
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcrypt';
+import NextAuth from "next-auth";
+import Providers from "next-auth/providers";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
 export default NextAuth({
   providers: [
-    CredentialsProvider({
-      name: 'Credentials',
-      credentials: {
-        email: { label: 'Email', type: 'text' },
-        password: { label: 'Password', type: 'password' }
-      },
+    Providers.Credentials({
       async authorize(credentials) {
-        // Fetch user from database
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
 
-        // Check if user exists and password is correct
         if (user && bcrypt.compareSync(credentials.password, user.password)) {
-          return { id: user.id, email: user.email };
+          return user;
         } else {
-          return null; // Return null if authentication fails
+          throw new Error("Invalid credentials");
         }
       },
     }),
   ],
   adapter: PrismaAdapter(prisma),
   session: {
-    strategy: 'jwt', // Use JWT for sessions
+    jwt: true,
   },
   pages: {
-    signIn: '/auth/signin', // Custom sign-in page
+    signIn: '/auth/signin',
   },
   callbacks: {
-    async session({ session, user }) {
-      // Add user ID to session
+    async session(session, user) {
       session.userId = user.id;
       return session;
     },
