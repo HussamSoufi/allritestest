@@ -1,3 +1,4 @@
+//pages\dashboard.js
 "use client";
 import { SessionProvider, useSession } from "next-auth/react";
 import { useState, useEffect, useMemo } from "react";
@@ -33,12 +34,14 @@ export async function getServerSideProps(context) {
 function Dashboard() {
   const { data: session } = useSession();
   const [newTask, setNewTask] = useState({ title: "", description: "", status: "pending" });
-  const [tasks, setTasks] = useState([]); // Initialize as an empty array
+const [tasks, setTasks] = useState([]); // Initialize as an empty array
+
 useEffect(() => {
   if (session?.userId) {
-    fetch(`/api/tasks/${session.userId}`)
+    fetch(`/api/tasks/${session.userId}`, { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
+        console.log('Fetched tasks:', data); // Log the fetched data
         if (Array.isArray(data)) {
           setTasks(data);
         } else {
@@ -52,6 +55,7 @@ useEffect(() => {
       });
   }
 }, [session]);
+
 
 const handleCreateTask = async () => {
   const res = await fetch(`/api/tasks`, {
@@ -81,19 +85,24 @@ const handleCreateTask = async () => {
         />
         <button onClick={handleCreateTask}>Create Task</button>
       </div>
-            <ul>
-        {Array.isArray(tasks) && tasks.length > 0 ? (
-          tasks.map((task) => (
-            <li key={task.id}>
-              <h2>{task.title}</h2>
-              <p>{task.description}</p>
-              <p>Status: {task.status}</p>
-            </li>
-          ))
-        ) : (
-          <p>No tasks found.</p>
-        )}
-      </ul>
+   <ul>
+  {Array.isArray(tasks) ? (
+    tasks.length > 0 ? (
+      tasks.map((task) => (
+        <li key={task.id}>
+          <h2>{task.title}</h2>
+          <p>{task.description}</p>
+          <p>Status: {task.status}</p>
+        </li>
+      ))
+    ) : (
+      <p>No tasks found. Array length is {tasks.length}</p>
+    )
+  ) : (
+    <p>Tasks is not an array. Actual value: {JSON.stringify(tasks)}</p>
+  )}
+</ul>
+
     </div>
   );
 }

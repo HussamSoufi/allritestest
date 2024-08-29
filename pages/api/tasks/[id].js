@@ -16,22 +16,25 @@ export default async function handler(req, res) {
       }
 
       try {
-        const task = await prisma.task.findUnique({
-          where: { id: parseInt(id, 10) }, // Ensure id is an integer
+        const tasks = await prisma.task.findMany({
+          where: { userId: parseInt(id, 10) }, // Fetch tasks based on userId
         });
 
-        if (!task) {
-          return res.status(404).json({ error: 'Task not found' });
+        // Log the fetched tasks
+        console.log('Fetched tasks:', tasks);
+
+        if (tasks.length === 0) {
+          return res.status(404).json({ error: 'No tasks found' });
         }
 
-        res.status(200).json(task);
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.status(200).json(tasks);
       } catch (error) {
-        console.error(error);
+        console.error('Error fetching tasks:', error);
         res.status(500).json({ error: 'Internal server error' });
       }
       break;
 
-    // Handle other HTTP methods if needed
     default:
       res.setHeader('Allow', ['GET']);
       res.status(405).end(`Method ${method} Not Allowed`);
