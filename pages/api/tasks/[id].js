@@ -1,30 +1,39 @@
-import { PrismaClient } from "@prisma/client";
+// pages/api/tasks/[id].js
+import { PrismaClient } from '@prisma/client';
+
 const prisma = new PrismaClient();
 
 export default async function handler(req, res) {
-  const { id } = req.query;
-  if (req.method === "GET") {
-    const task = await prisma.task.findUnique({
-      where: { id: parseInt(id) },
-    });
-    res.json(task);
-  } else if (req.method === "POST") {
-    const { title, description, status, userId } = req.body;
-    const newTask = await prisma.task.create({
-      data: { title, description, status, userId: parseInt(userId) },
-    });
-    res.json(newTask);
-  } else if (req.method === "PUT") {
-    const { title, description, status } = req.body;
-    const updatedTask = await prisma.task.update({
-      where: { id: parseInt(id) },
-      data: { title, description, status },
-    });
-    res.json(updatedTask);
-  } else if (req.method === "DELETE") {
-    const deletedTask = await prisma.task.delete({
-      where: { id: parseInt(id) },
-    });
-    res.json(deletedTask);
+  const {
+    query: { id },
+    method,
+  } = req;
+
+  switch (method) {
+    case 'GET':
+      if (!id) {
+        return res.status(400).json({ error: 'Task ID is required' });
+      }
+
+      try {
+        const task = await prisma.task.findUnique({
+          where: { id: parseInt(id, 10) }, // Ensure id is an integer
+        });
+
+        if (!task) {
+          return res.status(404).json({ error: 'Task not found' });
+        }
+
+        res.status(200).json(task);
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+      break;
+
+    // Handle other HTTP methods if needed
+    default:
+      res.setHeader('Allow', ['GET']);
+      res.status(405).end(`Method ${method} Not Allowed`);
   }
 }

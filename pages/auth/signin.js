@@ -1,5 +1,7 @@
+// signin.js
 import { signIn } from "next-auth/react";
 import { useState } from "react";
+import Link from "next/link";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
@@ -10,6 +12,7 @@ export default function SignIn() {
     signIn("credentials", {
       email,
       password,
+      callbackUrl: "/dashboard", // Redirect to dashboard after sign in
     });
   };
 
@@ -30,6 +33,9 @@ export default function SignIn() {
         />
         <button type="submit">Sign In</button>
       </form>
-    </div>
+      <p>
+        Don't have an account? <Link href="/auth/signup">Sign up</Link>
+      </p>
+     </div>
   );
 }

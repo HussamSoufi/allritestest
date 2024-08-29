@@ -1,26 +1,68 @@
-import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+"use client";
+import { SessionProvider, useSession } from "next-auth/react";
+import { useState, useEffect, useMemo } from "react";
+import { format, isBefore, isAfter } from 'date-fns';
+// dashboard.js
+import { getSession } from "next-auth/react";
+// Main App component (or a suitable higher-level component)
+export default function App() { 
+  return (
+    <SessionProvider> 
+      <Dashboard /> 
+    </SessionProvider>
+  );
+}
+export async function getServerSideProps(context) {
+  const session = await getSession(context);
 
-export default function Dashboard() {
-  const { data: session } = useSession();
-  const [tasks, setTasks] = useState([]);
-  const [newTask, setNewTask] = useState({ title: "", description: "", status: "pending" });
+  if (!session) {
+    return {
+      redirect: {
+        destination: "/auth/signin",
+        permanent: false,
+      },
+    };
+  }
 
-  useEffect(() => {
-    fetch(`/api/tasks/${session?.userId}`)
-      .then((res) => res.json())
-      .then((data) => setTasks(data));
-  }, [session]);
-
-  const handleCreateTask = async () => {
-    const res = await fetch(`/api/tasks/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...newTask, userId: session?.userId }),
-    });
-    const task = await res.json();
-    setTasks([...tasks, task]);
+  return {
+    props: { session },
   };
+}
+
+
+function Dashboard() {
+  const { data: session } = useSession();
+  const [newTask, setNewTask] = useState({ title: "", description: "", status: "pending" });
+  const [tasks, setTasks] = useState([]); // Initialize as an empty array
+useEffect(() => {
+  if (session?.userId) {
+    fetch(`/api/tasks/${session.userId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setTasks(data);
+        } else {
+          console.error("Expected an array but got:", data);
+          setTasks([]);
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to fetch tasks:', error);
+        setTasks([]);
+      });
+  }
+}, [session]);
+
+const handleCreateTask = async () => {
+  const res = await fetch(`/api/tasks`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...newTask, userId: session?.userId }),
+  });
+  const task = await res.json();
+  // Ensure tasks is an array before spreading
+  setTasks((prevTasks) => Array.isArray(prevTasks) ? [...prevTasks, task] : [task]);
+};
 
   return (
     <div>
@@ -39,14 +81,18 @@ export default function Dashboard() {
         />
         <button onClick={handleCreateTask}>Create Task</button>
       </div>
-      <ul>
-        {tasks.map((task) => (
-          <li key={task.id}>
-            <h2>{task.title}</h2>
-            <p>{task.description}</p>
-            <p>Status: {task.status}</p>
-          </li>
-        ))}
+            <ul>
+        {Array.isArray(tasks) && tasks.length > 0 ? (
+          tasks.map((task) => (
+            <li key={task.id}>
+              <h2>{task.title}</h2>
+              <p>{task.description}</p>
+              <p>Status: {task.status}</p>
+            </li>
+          ))
+        ) : (
+          <p>No tasks found.</p>
+        )}
       </ul>
     </div>
   );
