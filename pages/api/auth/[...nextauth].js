@@ -1,5 +1,5 @@
 import NextAuth from "next-auth";
-import Providers from "next-auth/providers";
+import CredentialsProvider from "next-auth/providers/credentials"; 
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 
 export default NextAuth({
   providers: [
-    Providers.Credentials({
+    CredentialsProvider({
       async authorize(credentials) {
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
