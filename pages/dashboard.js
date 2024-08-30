@@ -44,6 +44,8 @@ function Dashboard() {
   const { data: session } = useSession();
   const [newTask, setNewTask] = useState({ title: "", description: "", status: "pending" });
   const [tasks, setTasks] = useState([]);
+  const [editingTask, setEditingTask] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false); // State to control modal visibility
 
   useEffect(() => {
     if (session?.userId) {
@@ -97,9 +99,51 @@ function Dashboard() {
       console.error('Failed to delete task');
     }
   };
+
+    const handleEditTask = (task) => {
+    setEditingTask(task);
+    setIsModalOpen(true); // Open the modal
+  };
+
+const handleUpdateTask = async () => {
+  if (!editingTask) return;
+
+  const res = await fetch(`/api/tasks/${editingTask.id}`, {
+    method: "PUT", 
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ 
+      title: editingTask.title, 
+      description: editingTask.description 
+    }), 
+  });
+
+  if (res.ok) {
+    const updatedTask = await res.json();
+    setTasks((prevTasks) =>
+      prevTasks.map((task) => (task.id === updatedTask.id ? updatedTask : task))
+    );
+    setEditingTask(null);
+    setIsModalOpen(false);
+  } else {
+    console.error('Failed to update task');
+  }
+};
+  
+  
   return (
     <div className={styles.container}> 
       <div className={styles.card}> 
+
+        {/* User Info and Logout Section */}
+        {session && ( 
+          <div>
+            <div>
+              <p className={styles.taskDescription}>Logged in as: {session.user.name || session.user.email}</p> 
+              {/* Display name or email if name is not available */}
+            </div>
+          </div>
+        )}
+
         {/* Create Task Section */}
         <div className={styles.section}>
           <h2 className={styles.heading}>Create a New Task</h2>
@@ -161,6 +205,14 @@ function Dashboard() {
                       >
                         Finished
                       </button>
+
+              {/* Add the Edit button here */}
+              <button
+                className={styles.editButton} 
+                onClick={() => handleEditTask(task)}
+              >
+                Edit
+              </button>
                       <button
                         className={styles.deleteButton}
                         onClick={() => handleDeleteTask(task.id)}
@@ -178,7 +230,50 @@ function Dashboard() {
             )}
           </ul>
         </div>
+
+      {/* Edit Task Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <h3 className={styles.taskDescription}>Edit Task</h3>
+
+            <input
+              type="text"
+              className={styles.input}
+              placeholder="Task title"
+              value={editingTask.title}
+              onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
+            />
+
+            <textarea
+              className={styles.textarea}
+              placeholder="Task description"
+              value={editingTask.description}
+              onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
+            />
+
+            <div className="flex justify-end mt-4">
+              <button
+                className={styles.button + ' mr-2'} // Add some margin to the right
+                onClick={handleUpdateTask}
+              >
+                Save Changes
+              </button>
+              <button
+                className={styles.deleteButton} // Define this class in your CSS
+                onClick={() => {
+                  setEditingTask(null);
+                  setIsModalOpen(false);
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
