@@ -1,3 +1,4 @@
+// Dashboard.js
 "use client";
 import { SessionProvider, useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
@@ -6,7 +7,7 @@ import { authOptions } from "../pages/api/auth/[...nextauth]";
 import "../styles/globals.css";
 import styles from "../styles/Dashboard.module.css"; // Import the CSS module
 
-// Main App component (or a suitable higher-level component)
+// Main Application component
 export default function App() { 
   return (
     <SessionProvider> 
@@ -15,9 +16,11 @@ export default function App() {
   );
 }
 
+// Function to handle server-side authentication
 export async function getServerSideProps(context) {
   const session = await getServerSession(context.req, context.res, authOptions);
 
+  // Redirect to the login page if the user is not authenticated
   if (!session) {
     return {
       redirect: {
@@ -40,13 +43,16 @@ export async function getServerSideProps(context) {
   };
 }
 
+// Dashboard component containing the task management functionality
 function Dashboard() {
   const { data: session } = useSession();
   const [newTask, setNewTask] = useState({ title: "", description: "", status: "pending" });
   const [tasks, setTasks] = useState([]);
   const [editingTask, setEditingTask] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false); // State to control modal visibility
+  const [isModalOpen, setIsModalOpen] = useState(false); 
+  const [filter, setFilter] = useState("all"); // State for filtering tasks
 
+  // Fetch tasks when the session is available
   useEffect(() => {
     if (session?.userId) {
       fetch(`/api/tasks/${session.userId}`, { cache: "no-store" })
@@ -65,6 +71,7 @@ function Dashboard() {
     }
   }, [session]);
 
+  // Function to create a new task
   const handleCreateTask = async () => {
     const res = await fetch(`/api/tasks`, {
       method: "POST",
@@ -73,10 +80,10 @@ function Dashboard() {
     });
     const task = await res.json();
     setTasks((prevTasks) => Array.isArray(prevTasks) ? [...prevTasks, task] : [task]);
-      // Reset the input fields
-  setNewTask({ title: "", description: "", status: "pending" }); 
+    setNewTask({ title: "", description: "", status: "pending" }); 
   };
 
+  // Function to update the status of a task
   const handleUpdateStatus = async (taskId, newStatus) => {
     const res = await fetch(`/api/tasks/${taskId}/status`, {
       method: "PATCH",
@@ -89,6 +96,7 @@ function Dashboard() {
     ));
   };
 
+  // Function to delete a task
   const handleDeleteTask = async (taskId) => {
     const res = await fetch(`/api/tasks/${taskId}/delete`, {
       method: "DELETE",
@@ -100,36 +108,42 @@ function Dashboard() {
     }
   };
 
-    const handleEditTask = (task) => {
+  // Function to handle task editing
+  const handleEditTask = (task) => {
     setEditingTask(task);
-    setIsModalOpen(true); // Open the modal
+    setIsModalOpen(true); 
   };
 
-const handleUpdateTask = async () => {
-  if (!editingTask) return;
+  // Function to update an edited task
+  const handleUpdateTask = async () => {
+    if (!editingTask) return;
 
-  const res = await fetch(`/api/tasks/${editingTask.id}`, {
-    method: "PUT", 
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ 
-      title: editingTask.title, 
-      description: editingTask.description 
-    }), 
-  });
+    const res = await fetch(`/api/tasks/${editingTask.id}`, { 
+      method: "PUT", 
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        title: editingTask.title, 
+        description: editingTask.description 
+      }), 
+    });
 
-  if (res.ok) {
-    const updatedTask = await res.json();
-    setTasks((prevTasks) =>
-      prevTasks.map((task) => (task.id === updatedTask.id ? updatedTask : task))
-    );
-    setEditingTask(null);
-    setIsModalOpen(false);
-  } else {
-    console.error('Failed to update task');
-  }
-};
-  
-  
+    if (res.ok) {
+      const updatedTask = await res.json();
+      setTasks((prevTasks) =>
+        prevTasks.map((task) => (task.id === updatedTask.id ? updatedTask : task))
+      );
+      setEditingTask(null);
+      setIsModalOpen(false);
+    } else {
+      console.error('Failed to update task');
+    }
+  };
+
+  // Filter tasks based on the selected filter status
+  const filteredTasks = tasks.filter((task) => 
+    filter === "all" || task.status === filter
+  );
+
   return (
     <div className={styles.container}> 
       <div className={styles.card}> 
@@ -139,7 +153,6 @@ const handleUpdateTask = async () => {
           <div>
             <div>
               <p className={styles.taskDescription}>Logged in as: {session.user.name || session.user.email}</p> 
-              {/* Display name or email if name is not available */}
             </div>
           </div>
         )}
@@ -168,51 +181,66 @@ const handleUpdateTask = async () => {
           </button>
         </div>
 
+        {/* Filter Tasks Section */}
+        <div className={styles.section}>
+          <h2 className={styles.heading}>Filter Tasks</h2>
+          <select
+                className={styles.select} // Apply styles from Dashboard.module.css
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          >
+            <option value="all">All</option>
+            <option value="pending">Pending</option>
+            <option value="inprogress">In Progress</option>
+            <option value="finished">Finished</option>
+          </select>
+        </div>
+
         {/* Your Tasks Section */}
         <div>
           <h2 className={styles.heading}>Your Tasks</h2>
           <ul>
-            {Array.isArray(tasks) ? (
-              tasks.length > 0 ? (
-                tasks.map((task) => (
+            {Array.isArray(filteredTasks) ? (
+              filteredTasks.length > 0 ? (
+                filteredTasks.map((task) => (
                   <li key={task.id} className={styles.taskItem}>
                     <div className={styles.taskContent}> 
                       <h3 className={styles.taskTitle}>{task.title}</h3>
                       <p className={styles.taskDescription}>{task.description}</p>
-                      <p className={styles.taskStatus + ' ' + styles[task.status]}> 
+                      <p className={`${styles.taskStatus} ${styles[task.status]}`}> 
                         Status: {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
                       </p>
                     </div>
                     <div className={styles.buttonGroup}>
                       <button
-                        className={styles.statusButton + ' ' + (task.status === 'pending' ? styles.disabled : styles.active)}
+                        className={`${styles.statusButton} ${task.status === 'pending' ? styles.disabled : styles.active}`}
                         onClick={() => handleUpdateStatus(task.id, 'pending')}
                         disabled={task.status === 'pending'}
                       >
                         Pending
                       </button>
                       <button
-                        className={styles.statusButton + ' ' + (task.status === 'inprogress' ? styles.disabled : styles.active)}
+                        className={`${styles.statusButton} ${task.status === 'inprogress' ? styles.disabled : styles.active}`}
                         onClick={() => handleUpdateStatus(task.id, 'inprogress')}
                         disabled={task.status === 'inprogress'}
                       >
                         In Progress
                       </button>
                       <button
-                        className={styles.statusButton + ' ' + (task.status === 'finished' ? styles.disabled : styles.active)}
+                        className={`${styles.statusButton} ${task.status === 'finished' ? styles.disabled : styles.active}`}
                         onClick={() => handleUpdateStatus(task.id, 'finished')}
                         disabled={task.status === 'finished'}
                       >
                         Finished
                       </button>
 
-              {/* Add the Edit button here */}
-              <button
-                className={styles.editButton} 
-                onClick={() => handleEditTask(task)}
-              >
-                Edit
-              </button>
+                      {/* Add the Edit button here */}
+                      <button
+                        className={styles.editButton} 
+                        onClick={() => handleEditTask(task)}
+                      >
+                        Edit
+                      </button>
                       <button
                         className={styles.deleteButton}
                         onClick={() => handleDeleteTask(task.id)}
@@ -231,49 +259,47 @@ const handleUpdateTask = async () => {
           </ul>
         </div>
 
-      {/* Edit Task Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg">
-            <h3 className={styles.taskDescription}>Edit Task</h3>
+        {/* Edit Task Modal */}
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+              <h2 className={styles.heading}>Edit Task</h2>
+              <input
+                className={styles.input}
+                type="text"
+                placeholder="Task title"
+                value={editingTask.title}
+                onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
+              />
+              <textarea
+                className={styles.textarea}
+                placeholder="Task description"
+                value={editingTask.description}
+                onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
+              />
 
-            <input
-              type="text"
-              className={styles.input}
-              placeholder="Task title"
-              value={editingTask.title}
-              onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
-            />
-
-            <textarea
-              className={styles.textarea}
-              placeholder="Task description"
-              value={editingTask.description}
-              onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
-            />
-
-            <div className="flex justify-end mt-4">
-              <button
-                className={styles.button + ' mr-2'} // Add some margin to the right
-                onClick={handleUpdateTask}
-              >
-                Save Changes
-              </button>
-              <button
-                className={styles.deleteButton} // Define this class in your CSS
-                onClick={() => {
-                  setEditingTask(null);
-                  setIsModalOpen(false);
-                }}
-              >
-                Cancel
-              </button>
+              <div className="flex justify-between mt-4">
+                <button
+                  className={styles.button}
+                  onClick={handleUpdateTask}
+                >
+                  Save
+                </button>
+                <button
+                  className={styles.cancelButton}
+                  onClick={() => {
+                    setIsModalOpen(false); 
+                    setEditingTask(null);
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
-          </div>
         )}
+
       </div>
     </div>
   );
 }
-
